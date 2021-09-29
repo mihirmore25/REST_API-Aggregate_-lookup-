@@ -12,31 +12,30 @@ app.get("/", (req, res) => {
 });
 
 app.route("/students")
-    .get((req, res) => {
-        Student.find({}).populate("studentMarks").exec((err, students) => {
-            if (err) {
-                res.send(err);
-            }
-
+    .get(async (req, res) => {
+        try {
+            const students = await Student.find({}).populate("studentMarks");
             res.send(students);
-        });
+        } catch (error) {
+            res.send(error);
+        }
     })
 
-    .post((req, res) => {
-        const newStudent = new Student({
-            _id: new mongoose.Types.ObjectId(),
-            firstName: req.body.firstName,
-            age: req.body.age,
-            rollNo: req.body.rollNo
-        })
+    .post(async (req, res) => {
+        try {
+            const newStudent = new Student({
+                _id: new mongoose.Types.ObjectId(),
+                firstName: req.body.firstName,
+                age: req.body.age,
+                rollNo: req.body.rollNo
+            });
 
-        newStudent.save((err, student) => {
-            if (err) {
-                res.send(err);
-            }
+            const student = await newStudent.save();
+            res.send(`New student is created ${student}`);
 
-            res.send(`New student is created ${student}`)
-        });
+        } catch (error) {
+            res.send(error);
+        }
     })
 
     .put((req, res) => {
@@ -47,26 +46,26 @@ app.route("/students")
         });
     })
 
-    .delete((req, res) => {
-        Student.deleteMany({}, (err, deletedStudentCount) => {
-            if (err) {
-                res.send(err);
-            }
+    .delete(async (req, res) => {
 
+        try {
+            const deletedStudentCount = await Student.deleteMany({});
             res.send(deletedStudentCount);
-        });
+        } catch (error) {
+            res.send(error);
+        }
+
     });
 
 
 app.route("/students/:studentId")
-    .get((req, res) => {
-        Student.findOne({ _id: req.params.studentId }).populate("studentMarks").exec((err, student) => {
-            if (err) {
-                res.send(err);
-            }
-
+    .get(async (req, res) => {
+        try {
+            const student = await Student.findOne({ _id: req.params.studentId }).populate("studentMarks");
             res.send(student);
-        });
+        } catch (error) {
+            res.send(error);
+        }
     })
 
     .post((req, res) => {
@@ -77,50 +76,47 @@ app.route("/students/:studentId")
         });
     })
 
-    .put((req, res) => {
-        Student.updateOne({ _id: req.params.studentId },
-            {
-                $set: {
-                    firstName: req.body.firstName,
-                    age: req.body.age,
-                    rollNo: req.body.rollNo,
-                    studentMarks: [req.body.studentMarks]
-                }
-            },
-            (err, updatedStudent) => {
-                if (err) {
-                    res.send(err);
-                }
+    .put(async (req, res) => {
 
-                res.send(updatedStudent);
-            }
-        )
+        try {
+            const updatedStudent = await Student.updateOne({ _id: req.params.studentId },
+                {
+                    $set: {
+                        firstName: req.body.firstName,
+                        age: req.body.age,
+                        rollNo: req.body.rollNo,
+                        studentMarks: [req.body.studentMarks]
+                    }
+                },
+            );
+            res.send(updatedStudent);
+
+        } catch (error) {
+            res.send(error);
+        }
     })
 
-    .delete((req, res) => {
-        Student.deleteOne({ _id: req.params.studentId }, (err, deletedStudentCount) => {
-            if (err) {
-                res.send(err);
-            }
-
+    .delete(async (req, res) => {
+        try {
+            const deletedStudentCount = await Student.deleteOne({ _id: req.params.studentId });
             res.send(deletedStudentCount);
-        });
+        } catch (error) {
+            res.send(error);
+        }
     });
 
 
 app.route("/students/:studentId/studentMarks")
-    .get((req, res) => {
-        Mark.findOne({ student_id: req.params.studentId }, (err, marks) => {
-            if (err) {
-                res.send(err);
-            }
-
+    .get(async (req, res) => {
+        try {
+            const marks = await Mark.findOne({ student_id: req.params.studentId });
             res.send(marks);
-        });
-
+        } catch (error) {
+            res.send(error);
+        }
     })
 
-    .post((req, res) => {
+    .post(async (req, res) => {
         const studentMark = new Mark({
             student_id: req.params.studentId,
             english: req.body.english,
@@ -128,83 +124,77 @@ app.route("/students/:studentId/studentMarks")
             computerScience: req.body.computerScience
         });
 
-        studentMark.save((err, marks) => {
-            if (err) {
-                res.send(err);
-            }
+        await studentMark.save();
 
-            Mark.findOne({ student_id: req.params.studentId })
-                .populate("student_id")
-                .exec((err, marks) => {
-                    if (err) {
-                        res.send(err);
-                    }
-
-                    Student.findOne({ _id: req.params.studentId }, (err, student) => {
-                        if (err) {
-                            res.send(err);
-                        }
-
-                        student.studentMarks.push(marks._id);
-                        student.save();
-                        res.send(student);
-                    });
-                });
-        });
-    })
-
-
-
-
-    .put((req, res) => {
-        Mark.updateOne({ student_id: req.params.studentId },
-            {
-                $set: {
-                    firstName: req.body.firstName,
-                    age: req.body.age,
-                    rollNo: req.body.rollNo,
-                    studentMarks: [req.body.studentMarks]
-                }
-            },
-            (err, updatedStudent) => {
+        Mark.findOne({ student_id: req.params.studentId })
+            .populate("student_id")
+            .exec((err, marks) => {
                 if (err) {
                     res.send(err);
                 }
 
+                Student.findOne({ _id: req.params.studentId }, (err, student) => {
+                    if (err) {
+                        res.send(err);
+                    }
 
-                res.send(updatedStudent);
-            }
-        )
+                    student.studentMarks.push(marks._id);
+                    student.save();
+                    res.send(student);
+                });
+            });
     })
 
-    .delete((req, res) => {
-        Mark.deleteOne({ student_id: req.params.studentId }, (err, deletedStudentCount) => {
-            if (err) {
-                res.send(err);
-            }
+    .put(async (req, res) => {
+        try {
+            const updatedStudentMarks = await Mark.updateOne({ student_id: req.params.studentId },
+                {
+                    $set: {
+                        firstName: req.body.firstName,
+                        age: req.body.age,
+                        rollNo: req.body.rollNo,
+                        studentMarks: [req.body.studentMarks]
+                    }
+                },
+            );
 
+            res.send(updatedStudentMarks);
+        } catch (error) {
+            res.send(error);
+        }
+    })
+
+    .delete(async (req, res) => {
+        try {
+            const deletedStudentCount = await Mark.deleteOne({ student_id: req.params.studentId });
             res.send(deletedStudentCount);
-        });
+        } catch (error) {
+            res.send(error);
+        }
     });
 
 
-app.get("/studentsMarks/aggregate", (req, res) => {
-    Student.aggregate([
-        {
-            $lookup: {
-                from: "marks",
-                localField: "_id",
-                foreignField: "student_id",
-                as: "studentMarks"
+app.get("/studentsMarks/aggregate", async (req, res) => {
+    try {
+        const result = await Student.aggregate([
+            {
+                $lookup: {
+                    from: "marks",
+                    localField: "_id",
+                    foreignField: "student_id",
+                    as: "studentMarks"
+                }
+            },
+            {
+                $match: { $or: [{ "computerScience": { $gt: 70 } }, { "age": 21 }] }
             }
-        },
-        {
-            $match: { $or: [{ "computerScience": { $gt: 70 } }, { "age": 21 } ] }
-        }
-    ]).then(result => {
+        ]);
+
         res.send(result);
-    })
-        .catch(err => res.send(err));
+        
+    } catch (error) {
+        res.send(error);
+    }
 });
 
 
